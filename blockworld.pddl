@@ -1,6 +1,6 @@
 ; This is a comment line
 (define (domain blockworld)
-  (:requirements :strips)
+  (:requirements :strips :negative-preconditions)
   (:predicates
     (drawer-open)
     (cabinet-open)
@@ -59,17 +59,14 @@
       (arm-empty)
       (not(drawer-open))
     )
-    :effect (
-      (drawer-open)
-    )
+    :effect (drawer-open)
   )
-    (:action close-drawer
+  
+  (:action close-drawer
     :precondition (and
       (arm-empty)
       (drawer-open)
     )
-    :effect (
-      (not(drawer-open))
-    )
+    :effect (not(drawer-open))
   )
 )

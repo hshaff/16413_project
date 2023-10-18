@@ -1,6 +1,6 @@
 (define (problem pb1)
   (:domain blockworld)
-  (:init
+  (:init 
     (arm-empty)
     (spam-on-countertop)
     (sugar-on-stovetop)
