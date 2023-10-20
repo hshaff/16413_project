@@ -1,26 +1,41 @@
-class Graph(object):
-    def __init__(self, node_label_fn=None):
-        self._nodes = set()
-        self._edges = dict()
-        self.node_label_fn = node_label_fn if node_label_fn else lambda x: x
-        self.node_positions = dict()
+class SearchNode(object):
+    def __init__(self, state, parent_node=None, cost=0.0, action=None):
+        self._parent = parent_node
+        self._state = state
+        self._action = action
+        self._cost = cost
 
-    def __contains__(self, node):
-        return node in self._nodes
-
-    def add_node(self, node):
-        """Adds a node to the graph."""
-        self._nodes.add(node)
+    def __repr__(self):
+        return "<SearchNode (id: %s)| state: %s, cost: %s, parent_id: %s>" % (id(self), self.state,
+                                                                              self.cost,id(self.parent))
     
-    def add_edge(self, node1, node2, weight=1.0, bidirectional=True):
-        """Adds an edge between node1 and node2. Adds the nodes to the graph first
-        if they don't exist."""
-        self.add_node(node1)
-        self.add_node(node2)
-        node1_edges = self._edges.get(node1, set())
-        node1_edges.add(Edge(node1, node2, weight))
-        self._edges[node1] = node1_edges
-        if bidirectional:
-                node2_edges = self._edges.get(node2, set())
-                node2_edges.add(Edge(node2, node1, weight))
-                self._edges[node2] = node2_edges
+    @property
+    def state(self):
+        """Get the state represented by this SearchNode"""
+        return self._state
+
+    @property
+    def parent(self):
+        """Get the parent search node that we are coming from."""
+        return self._parent
+
+    @property
+    def action(self):
+        """Get the action that was taken to get from parent to the state represented by this node."""
+        return self._action
+    
+    def __eq__(self, other):
+        return isinstance(other, SearchNode) and self._state == other._state
+
+class Path(object):
+    """This class computes the path from the starting state until the state specified by the search_node
+    parameter by iterating backwards."""
+    def __init__(self, search_node):
+        self.path = []
+        node = search_node
+        while node is not None:
+            self.path.append(node.state)
+            node = node.parent
+        self.path.reverse()
+
+

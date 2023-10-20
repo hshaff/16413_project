@@ -26,8 +26,10 @@ Key Functions:
     close-drawer -- the arm closes the drawer if the drawer is open and the arm is not already holding an object
 
 Solver:
+Store each state as a list of booleans corresponding to each predicate (?)
 
 Challenges:
+The largest challenge that we faced while 
 
 PADM Project Section 2 -- Motion Planning
 TODO
