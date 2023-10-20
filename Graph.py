@@ -33,8 +33,8 @@ class Path(object):
     def __init__(self, search_node):
         self.path = []
         node = search_node
-        while node is not None:
-            self.path.append(node.state)
+        while node.parent is not None:
+            self.path.append(node.action)
             node = node.parent
         self.path.reverse()
 
