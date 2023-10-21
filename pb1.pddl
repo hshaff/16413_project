@@ -1,5 +1,5 @@
 (define (problem pb1)
-  (:domain blockworld)
+  (:domain kitchenDomain)
   (:init 
     (arm-empty)
     (spam-on-countertop)

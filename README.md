@@ -13,19 +13,18 @@ In the process of designing the problem, we made the following assumptions about
 In the following phases of the project, the solution can be made more robust by including additional drawers, countertops, and stovetops if the above assumptions are incorrect. For simplicity when designing the problem, we assumed that the only objects that can be picked up or placed were the sugar and the spam. This can also be modified by adding additional predicates if this assumption is incorrect.
 
 Files: 
-    blockworld.pddl -- The PDDL domain script
+    kitchenDomain.pddl -- The PDDL domain script
     pb1.pddl --  The PDDL problem script
     main.py -- The main run script
     graph.py -- The script that defines the SearchNode and Path classes
 
 Key Functions: 
     main() -- Runs the PDDL parser and calls the planner function to generate an activity plan
-    generate_graph() -- Generates the graph from the initial state to the goal state
+    find_ff_heuristic() -- Generates the relaxed plan graph to find the FF heuristic, the number of actions until the goal conditions are satisfied
+    EFHC() -- Function to solve the planning problem using Enforced Hill Climbing (EHC) with the FF heuristic
     BFS() -- Implements the BFS search algorithm and returns an instance of the Path class defining the path from the initial state to the goal state
     check_goal() -- Checks the set of true predicates at the current state and returns true if the goal conditions are satisfied
     can_perform_action() -- Checks if the action can be performed based on the set of preconditions that are true at a state
-    find_ff_heuristic() -- Generates the relaxed plan graph to find the FF heuristic
-    solve() -- Function to solve the planning problem using Enforced Hill Climbing (EHC)
     SearchNode class -- Each instance of the class stores the state, parent, and action taken to get to the state
     Path class -- Each instance returns a list of the actions taken to get from the initial state to the goal state
 

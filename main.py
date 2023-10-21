@@ -5,7 +5,7 @@ import math
 import numpy as np 
 
 def find_ff_heuristic(states, predicates, actions, pos_goal,  neg_goal):
-    """Given initial state, predicates, actions, and goals, generatesa  relaxed planning graph and returns the 
+    """Given initial state, predicates, actions, and goals, generates a relaxed planning graph and returns the 
     fast forward heuristic
     """
     neg_start_states = set()
@@ -132,7 +132,7 @@ def solve():
 def main():
     plan = ''
     parser = PDDL_Parser()
-    domain_filename = 'blockworld.pddl'
+    domain_filename = 'kitchenDomain.pddl'
     problem_filename = 'pb1.pddl'
     parser.parse_domain(domain_filename)
     parser.parse_problem(problem_filename)

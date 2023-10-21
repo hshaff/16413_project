@@ -1,5 +1,5 @@
 ; This is a comment line
-(define (domain blockworld)
+(define (domain kitchenDomain)
   (:requirements :strips :negative-preconditions)
   (:predicates
     (drawer-closed)
