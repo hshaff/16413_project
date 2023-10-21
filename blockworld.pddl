@@ -2,7 +2,7 @@
 (define (domain blockworld)
   (:requirements :strips :negative-preconditions)
   (:predicates
-    (drawer-open)
+    (drawer-closed)
     (cabinet-open)
     (arm-empty)
     (spam-on-countertop)
@@ -45,7 +45,7 @@
   )
   (:action place-spam
     :precondition (and
-      (drawer-open)
+      (not(drawer-closed))
       (not(arm-empty))
       (not(spam-on-countertop))
     )
@@ -57,16 +57,16 @@
   (:action open-drawer
     :precondition (and
       (arm-empty)
-      (not(drawer-open))
+      (drawer-closed)
     )
-    :effect (drawer-open)
+    :effect (not(drawer-closed))
   )
   
   (:action close-drawer
     :precondition (and
       (arm-empty)
-      (drawer-open)
+      (not(drawer-closed))
     )
-    :effect (not(drawer-open))
+    :effect (drawer-closed)
   )
 )

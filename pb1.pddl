@@ -4,11 +4,12 @@
     (arm-empty)
     (spam-on-countertop)
     (sugar-on-stovetop)
+    (drawer-closed)
   )
   (:goal (and
     (sugar-on-countertop)
     (spam-in-drawer)
-    (not(drawer-open))
+    (drawer-closed)
     (arm-empty)
   ))
 )
