@@ -215,6 +215,93 @@ def motion_planner_main():
     wait_for_user()
     world.destroy()
 
+def rrt(start_pose, sample_fn):
+    pose = (start_pose[0] + start_pose[1])
+    V = set([pose])
+    E = set()
+    G = (V,E)
+    path = 0
+    temp_path = []
+    for i in range(10):
+        x_rand = sample_fn()  #
+        x_nearest = nearest(G, x_rand)
+        x_new = steer(x_nearest, x_rand)
+        print(x_new)
+        temp_path.append(x_new)
+    return temp_path
+
+
+def nearest(G, x_rand):
+    V = G[0]
+    E = G[1]
+    closest_dist = float('inf')
+    x_nearest = None
+    for v in V:
+        dist = np.sqrt((v[0]-x_rand[0])**2 + (v[1]-x_rand[1])**2 + (v[2]-x_rand[2])**2 + (v[3]-x_rand[3])**2 + (v[4]-x_rand[4])**2 +(v[5]-x_rand[5])**2 + (v[6]-x_rand[6])**2)
+        if dist < closest_dist:
+            closest_dist = dist 
+            x_nearest = v 
+    return x_nearest
+
+def steer(x_nearest, x_rand):
+    d = 1
+    line_len = np.sqrt((x_nearest[0]-x_rand[0])**2 + (x_nearest[1]-x_rand[1])**2 + (x_nearest[2]-x_rand[2])**2 + (x_nearest[3]-x_rand[3])**2 + (x_nearest[4]-x_rand[4])**2 +(x_nearest[5]-x_rand[5])**2 + (x_nearest[6]-x_rand[6])**2)
+    if line_len < d:
+        factor = 1
+    else:
+        factor = d / line_len
+    normal_rand = (x_rand[0] - x_nearest[0], x_rand[1] - x_nearest[1], x_rand[2] - x_nearest[2], x_rand[3] - x_nearest[3], x_rand[4] - x_nearest[4], x_rand[5] - x_nearest[5], x_rand[6] - x_nearest[6])
+    x_new = (factor*normal_rand[0] + x_nearest[0], factor*normal_rand[1] + x_nearest[1], factor*normal_rand[2] + x_nearest[2], factor*normal_rand[3] + x_nearest[3], factor*normal_rand[4] + x_nearest[4], factor*normal_rand[5] + x_nearest[5], factor*normal_rand[6] + x_nearest[6])
+    return x_new
+
+def test_motion_planner():
+    print('Random seed:', get_random_seed())
+    print('Numpy seed:', get_numpy_seed())
+
+    np.set_printoptions(precision=3, suppress=True)
+    world = World(use_gui=True)
+    sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
+    spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
+    wait_for_user()
+    world._update_initial()
+    tool_link = link_from_name(world.robot, 'panda_hand')
+    print('tool link', tool_link)
+    joints = get_movable_joints(world.robot)
+    print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
+    print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
+    print('IK Joints', get_ik_joints(world.robot, PANDA_INFO, tool_link))
+
+    sample_fn = get_sample_fn(world.robot, world.arm_joints)
+
+    start_pose = get_link_pose(world.robot, tool_link)
+    print('Start pose', start_pose)
+    print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
+    path = rrt(start_pose, sample_fn)
+    current_pose = path[0]
+    for v in path:
+        ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+        end_pose = v
+        #conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+        set_joint_positions(world.robot, ik_joints, end_pose)
+        wait_for_user()
+
+
+        
+
+
+
+
+        #for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
+        #    conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+         #   if conf is None:
+          #      print('Failure!')
+           #     wait_for_user()
+            #    break
+           # set_joint_positions(world.robot, ik_joints, conf)
+        #current_pose = end_pose
+
+
+
 def main():
     plan = ''
     parser = PDDL_Parser()
@@ -229,7 +316,8 @@ def main():
     B = BFS(parser.state, parser.actions, parser.positive_goals, parser.negative_goals)
     print(B.path)
     # Call motion planner
-    motion_planner_main()
+    #motion_planner_main()
+    test_motion_planner()
     # ff = find_ff_heuristic(parser.state, parser.predicates, parser.actions, parser.positive_goals, parser.negative_goals)
     # print(ff)
     # HC =  EFHC(parser.state, parser.predicates, parser.actions, parser.positive_goals, parser.negative_goals)
