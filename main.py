@@ -11,7 +11,7 @@ import argparse
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
 from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -193,13 +193,22 @@ def motion_planner_main():
     for i in range(2):
         print('Iteration:', i)
         conf = sample_fn()
+        print('CONF', conf)
         set_joint_positions(world.robot, world.arm_joints, conf)
+        for joint, value in zip(world.arm_joints, conf):
+            print('JOINT', joint, 'Value', value)
         wait_for_user()
+        #print('config', get_configuration(world.robot))
         ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
         start_pose = get_link_pose(world.robot, tool_link)
+        print('STRT', start_pose)
         end_pose = multiply(start_pose, Pose(Point(z=1.0)))
+        print('endpose', end_pose)
         for pose in interpolate_poses(start_pose, end_pose, pos_step_size=0.01):
+            print('pose', pose)
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+            print('conf2', conf)
+
             if conf is None:
                 print('Failure!')
                 wait_for_user()
@@ -215,20 +224,43 @@ def motion_planner_main():
     wait_for_user()
     world.destroy()
 
-def rrt(start_pose, sample_fn):
-    pose = (start_pose[0] + start_pose[1])
-    V = set([pose])
+def rrt(start_pose, sample_fn, goal_pose=Pose()):
+    print(goal_pose)
+    V = set([start_pose])
     E = set()
     G = (V,E)
     path = 0
     temp_path = []
-    for i in range(10):
+    while True:
         x_rand = sample_fn()  #
+        #print("x_rand", x_rand)
         x_nearest = nearest(G, x_rand)
+        #print('x_nearest', x_nearest)
         x_new = steer(x_nearest, x_rand)
-        print(x_new)
-        temp_path.append(x_new)
-    return temp_path
+        #print('x_new', x_new)
+        if True: #obstacle avoidance goes here
+            V.add(x_new)
+            E.add((x_nearest, x_new))
+            #print(x_new)
+        #temp_path.append(x_new)
+            if is_pose_close(x_new, goal_pose, pos_tolerance=1e-1, ori_tolerance=1*np.pi):  # goal detection
+                path, num_nodes, G = extract_path(G, x_new, start_pose)
+                print(num_nodes, len(path))
+                return path
+    #return temp_path
+
+def extract_path(G, x_end, start_pose):
+    V = G[0]
+    E = G[1]
+    path = [x_end]
+    current_node = x_end
+    while True:
+        if current_node == start_pose:
+            return path[::-1], len(V), (V,E)
+        for edge in E:
+            if edge[1] == current_node:
+                path.append(edge[0])
+                current_node = edge[0]
 
 
 def nearest(G, x_rand):
@@ -236,32 +268,70 @@ def nearest(G, x_rand):
     E = G[1]
     closest_dist = float('inf')
     x_nearest = None
-    for v in V:
-        dist = np.sqrt((v[0]-x_rand[0])**2 + (v[1]-x_rand[1])**2 + (v[2]-x_rand[2])**2 + (v[3]-x_rand[3])**2 + (v[4]-x_rand[4])**2 +(v[5]-x_rand[5])**2 + (v[6]-x_rand[6])**2)
+    for pose in V:
+        x, y, z = pose[0][0], pose[0][1], pose[0][2]  # only use position for now
+        x_rand_x, x_rand_y, x_rand_z = x_rand[0][0], x_rand[0][1], x_rand[0][2]
+        dist = np.sqrt((x-x_rand_x)**2 + (y - x_rand_y)**2 + (z - x_rand_z)**2)
+        #dist = np.sqrt((v[0]-x_rand[0])**2 + (v[1]-x_rand[1])**2 + (v[2]-x_rand[2])**2 + (v[3]-x_rand[3])**2 + (v[4]-x_rand[4])**2 +(v[5]-x_rand[5])**2 + (v[6]-x_rand[6])**2)
         if dist < closest_dist:
             closest_dist = dist 
-            x_nearest = v 
+            x_nearest = pose 
     return x_nearest
 
 def steer(x_nearest, x_rand):
-    d = 1
-    line_len = np.sqrt((x_nearest[0]-x_rand[0])**2 + (x_nearest[1]-x_rand[1])**2 + (x_nearest[2]-x_rand[2])**2 + (x_nearest[3]-x_rand[3])**2 + (x_nearest[4]-x_rand[4])**2 +(x_nearest[5]-x_rand[5])**2 + (x_nearest[6]-x_rand[6])**2)
+    d = .05
+    orientation = x_rand[1]  # untouched for now
+    x1, y1, z1 = x_nearest[0][0], x_nearest[0][1], x_nearest[0][2]  # only use position for now
+    x2, y2, z2 = x_rand[0][0], x_rand[0][1], x_rand[0][2]
+    line_len = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+    #line_len = np.sqrt((x_nearest[0]-x_rand[0])**2 + (x_nearest[1]-x_rand[1])**2 + (x_nearest[2]-x_rand[2])**2 + (x_nearest[3]-x_rand[3])**2 + (x_nearest[4]-x_rand[4])**2 +(x_nearest[5]-x_rand[5])**2 + (x_nearest[6]-x_rand[6])**2)
     if line_len < d:
         factor = 1
     else:
         factor = d / line_len
-    normal_rand = (x_rand[0] - x_nearest[0], x_rand[1] - x_nearest[1], x_rand[2] - x_nearest[2], x_rand[3] - x_nearest[3], x_rand[4] - x_nearest[4], x_rand[5] - x_nearest[5], x_rand[6] - x_nearest[6])
-    x_new = (factor*normal_rand[0] + x_nearest[0], factor*normal_rand[1] + x_nearest[1], factor*normal_rand[2] + x_nearest[2], factor*normal_rand[3] + x_nearest[3], factor*normal_rand[4] + x_nearest[4], factor*normal_rand[5] + x_nearest[5], factor*normal_rand[6] + x_nearest[6])
-    return x_new
+
+    normal_rand = (x2 - x1, y2 - y1, z2 - z1)
+    x,y,z = factor*normal_rand[0] + x1, factor*normal_rand[1] + y1, factor*normal_rand[2] + z1
+    #normal_rand = (x_rand[0] - x_nearest[0], x_rand[1] - x_nearest[1], x_rand[2] - x_nearest[2], x_rand[3] - x_nearest[3], x_rand[4] - x_nearest[4], x_rand[5] - x_nearest[5], x_rand[6] - x_nearest[6])
+   # x_new = (factor*normal_rand[0] + x_nearest[0], factor*normal_rand[1] + x_nearest[1], factor*normal_rand[2] + x_nearest[2], factor*normal_rand[3] + x_nearest[3], factor*normal_rand[4] + x_nearest[4], factor*normal_rand[5] + x_nearest[5], factor*normal_rand[6] + x_nearest[6])
+    #pnew = Point(x,y,z)
+    return ((x,y,z), orientation)
+
+def random_pose():
+    minx = -1
+    maxx = 1
+    miny = -1
+    maxy = 1
+    minz = -1
+    maxz = 1
+    mintheta = -np.pi 
+    maxtheta = np.pi 
+
+    x = np.random.uniform(minx, maxx)
+    y = np.random.uniform(miny, maxy)
+    z = np.random.uniform(minz, maxz)
+    theta1 = np.random.uniform(mintheta, maxtheta)
+    theta2 = np.random.uniform(mintheta, maxtheta)
+    theta3 = np.random.uniform(mintheta, maxtheta)
+
+    euler = Euler(theta1, theta2, theta3)
+    quat = quat_from_euler(euler)
+    point = Point(x, y, z)
+
+    p = Pose(point, euler)
+    return (tuple(p[0]), tuple(p[1]))
 
 def test_motion_planner():
     print('Random seed:', get_random_seed())
     print('Numpy seed:', get_numpy_seed())
+    #print('pose', random_pose())
 
     np.set_printoptions(precision=3, suppress=True)
     world = World(use_gui=True)
     sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
     spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
+    print('SUGAR', sugar_box)
+    print('Beginning RRT')
     wait_for_user()
     world._update_initial()
     tool_link = link_from_name(world.robot, 'panda_hand')
@@ -270,20 +340,31 @@ def test_motion_planner():
     print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
     print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
     print('IK Joints', get_ik_joints(world.robot, PANDA_INFO, tool_link))
-
+    print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
     sample_fn = get_sample_fn(world.robot, world.arm_joints)
 
     start_pose = get_link_pose(world.robot, tool_link)
-    print('Start pose', start_pose)
+    print('Start pose', type(start_pose))
     print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
-    path = rrt(start_pose, sample_fn)
-    current_pose = path[0]
-    for v in path:
+    path = rrt(start_pose, random_pose)
+    current_pose = start_pose
+    for p in path:
         ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
-        end_pose = v
+        end_pose = p
         #conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
-        set_joint_positions(world.robot, ik_joints, end_pose)
-        wait_for_user()
+        #wait_for_user()
+        print('current_pose', current_pose[0])
+        print('end_pose', end_pose[0])
+        for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
+            conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+            if conf is None:
+                print('Failure!')
+                #wait_for_user()
+                break
+            set_joint_positions(world.robot, ik_joints, conf)
+        current_pose = end_pose
+    wait_for_user()
+    print('FINAL POSE', get_link_pose(world.robot, tool_link))
 
 
         
