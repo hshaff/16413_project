@@ -204,7 +204,7 @@ def motion_planner_main():
         print('STRT', start_pose)
         end_pose = multiply(start_pose, Pose(Point(z=1.0)))
         print('endpose', end_pose)
-        for pose in interpolate_poses(start_pose, end_pose, pos_step_size=0.01):
+        for pose in interpolate_poses(start_pose, end_pose, pos_step_size=0.001):
             print('pose', pose)
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
             print('conf2', conf)
@@ -224,8 +224,9 @@ def motion_planner_main():
     wait_for_user()
     world.destroy()
 
-def rrt(start_pose, sample_fn, goal_pose=Pose()):
-    print(goal_pose)
+def rrt(start_pose, sample_fn, goal_pose=Pose(point=(1.5,0,0))):
+    print('RRT Goal',goal_pose)
+    print('RRT start',start_pose)
     V = set([start_pose])
     E = set()
     G = (V,E)
@@ -243,7 +244,8 @@ def rrt(start_pose, sample_fn, goal_pose=Pose()):
             E.add((x_nearest, x_new))
             #print(x_new)
         #temp_path.append(x_new)
-            if is_pose_close(x_new, goal_pose, pos_tolerance=1e-1, ori_tolerance=1*np.pi):  # goal detection
+            #if is_pose_close(x_new, goal_pose, pos_tolerance=1e-1, ori_tolerance=1*np.pi):  # goal detection
+            if is_close(x_new, goal_pose):
                 path, num_nodes, G = extract_path(G, x_new, start_pose)
                 print(num_nodes, len(path))
                 return path
@@ -280,7 +282,7 @@ def nearest(G, x_rand):
 
 def steer(x_nearest, x_rand):
     d = .05
-    orientation = x_rand[1]  # untouched for now
+    orientation = x_nearest[1]  # untouched for now
     x1, y1, z1 = x_nearest[0][0], x_nearest[0][1], x_nearest[0][2]  # only use position for now
     x2, y2, z2 = x_rand[0][0], x_rand[0][1], x_rand[0][2]
     line_len = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
@@ -298,8 +300,8 @@ def steer(x_nearest, x_rand):
     return ((x,y,z), orientation)
 
 def random_pose():
-    minx = -1
-    maxx = 1
+    minx = 0
+    maxx = 2
     miny = -1
     maxy = 1
     minz = -1
@@ -321,6 +323,22 @@ def random_pose():
     p = Pose(point, euler)
     return (tuple(p[0]), tuple(p[1]))
 
+def is_close(pose, goal, tol=0.1):
+    """ 
+    Compare euclidean distance of a pose to the goal. 
+    is_pose_close only checks that each value is within a distance
+    """
+    x1,y1,z1 = pose[0]
+    x2,y2,z2 = goal[0]
+    dist = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
+    if dist <= tol:
+        return True 
+    else:
+        return False
+
+
+
+
 def test_motion_planner():
     print('Random seed:', get_random_seed())
     print('Numpy seed:', get_numpy_seed())
@@ -330,22 +348,22 @@ def test_motion_planner():
     world = World(use_gui=True)
     sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
     spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
-    print('SUGAR', sugar_box)
+    #print('SUGAR', sugar_box)
     print('Beginning RRT')
     wait_for_user()
     world._update_initial()
     tool_link = link_from_name(world.robot, 'panda_hand')
-    print('tool link', tool_link)
+    #print('tool link', tool_link)
     joints = get_movable_joints(world.robot)
-    print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
-    print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
-    print('IK Joints', get_ik_joints(world.robot, PANDA_INFO, tool_link))
-    print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
+    #print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
+    #print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
+    ##print('IK Joints', get_ik_joints(world.robot, PANDA_INFO, tool_link))
+    #print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
     sample_fn = get_sample_fn(world.robot, world.arm_joints)
 
     start_pose = get_link_pose(world.robot, tool_link)
-    print('Start pose', type(start_pose))
-    print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
+    #print('Start pose', type(start_pose))
+    #print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
     path = rrt(start_pose, random_pose)
     current_pose = start_pose
     for p in path:
@@ -353,8 +371,8 @@ def test_motion_planner():
         end_pose = p
         #conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
         #wait_for_user()
-        print('current_pose', current_pose[0])
-        print('end_pose', end_pose[0])
+        #print('current_pose', current_pose[0])
+        #print('end_pose', end_pose[0])
         for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
             if conf is None:
