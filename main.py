@@ -11,7 +11,7 @@ import argparse
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
 from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -340,8 +340,8 @@ def is_close(pose, goal, tol=0.1):
 
 
 def test_motion_planner():
-    print('Random seed:', get_random_seed())
-    print('Numpy seed:', get_numpy_seed())
+    #print('Random seed:', get_random_seed())
+    #print('Numpy seed:', get_numpy_seed())
     #print('pose', random_pose())
 
     np.set_printoptions(precision=3, suppress=True)
@@ -349,6 +349,8 @@ def test_motion_planner():
     sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
     spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
     #print('SUGAR', sugar_box)
+    #print('Kitchen Joints:', world.kitchen_joints)
+    #print('Sugar Box Info:', get_joint(world.robot, sugar_box))
     print('Beginning RRT')
     wait_for_user()
     world._update_initial()
@@ -364,6 +366,13 @@ def test_motion_planner():
     start_pose = get_link_pose(world.robot, tool_link)
     #print('Start pose', type(start_pose))
     #print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
+    
+    for i in range(100):
+        goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
+        set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+
+
     path = rrt(start_pose, random_pose)
     current_pose = start_pose
     for p in path:
