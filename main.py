@@ -11,7 +11,7 @@ import argparse
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
 from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -174,55 +174,55 @@ def get_sample_fn(body, joints, custom_limits={}, **kwargs):
         return tuple(next(generator))
     return fn
 
-def motion_planner_main():
-    print('Random seed:', get_random_seed())
-    print('Numpy seed:', get_numpy_seed())
+# def motion_planner_main():
+#     print('Random seed:', get_random_seed())
+#     print('Numpy seed:', get_numpy_seed())
 
-    np.set_printoptions(precision=3, suppress=True)
-    world = World(use_gui=True)
-    sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
-    spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
-    wait_for_user()
-    world._update_initial()
-    tool_link = link_from_name(world.robot, 'panda_hand')
-    joints = get_movable_joints(world.robot)
-    print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
-    print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
-    sample_fn = get_sample_fn(world.robot, world.arm_joints)
-    print("Going to use IK to go from a sample start state to a goal state\n")
-    for i in range(2):
-        print('Iteration:', i)
-        conf = sample_fn()
-        print('CONF', conf)
-        set_joint_positions(world.robot, world.arm_joints, conf)
-        for joint, value in zip(world.arm_joints, conf):
-            print('JOINT', joint, 'Value', value)
-        wait_for_user()
-        #print('config', get_configuration(world.robot))
-        ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
-        start_pose = get_link_pose(world.robot, tool_link)
-        print('STRT', start_pose)
-        end_pose = multiply(start_pose, Pose(Point(z=1.0)))
-        print('endpose', end_pose)
-        for pose in interpolate_poses(start_pose, end_pose, pos_step_size=0.001):
-            print('pose', pose)
-            conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
-            print('conf2', conf)
+#     np.set_printoptions(precision=3, suppress=True)
+#     world = World(use_gui=True)
+#     sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
+#     spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
+#     wait_for_user()
+#     world._update_initial()
+#     tool_link = link_from_name(world.robot, 'panda_hand')
+#     joints = get_movable_joints(world.robot)
+#     print('Base Joints', [get_joint_name(world.robot, joint) for joint in world.base_joints])
+#     print('Arm Joints', [get_joint_name(world.robot, joint) for joint in world.arm_joints])
+#     sample_fn = get_sample_fn(world.robot, world.arm_joints)
+#     print("Going to use IK to go from a sample start state to a goal state\n")
+#     for i in range(2):
+#         print('Iteration:', i)
+#         conf = sample_fn()
+#         print('CONF', conf)
+#         set_joint_positions(world.robot, world.arm_joints, conf)
+#         for joint, value in zip(world.arm_joints, conf):
+#             print('JOINT', joint, 'Value', value)
+#         wait_for_user()
+#         #print('config', get_configuration(world.robot))
+#         ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+#         start_pose = get_link_pose(world.robot, tool_link)
+#         print('STRT', start_pose)
+#         end_pose = multiply(start_pose, Pose(Point(z=1.0)))
+#         print('endpose', end_pose)
+#         for pose in interpolate_poses(start_pose, end_pose, pos_step_size=0.001):
+#             print('pose', pose)
+#             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+#             print('conf2', conf)
 
-            if conf is None:
-                print('Failure!')
-                wait_for_user()
-                break
-            set_joint_positions(world.robot, ik_joints, conf)
-    print("Going to operate the base without collision checking")
-    for i in range(100):
-        goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
-        #print(get_collision_data(world.robot))
-        set_joint_positions(world.robot, world.base_joints, goal_pos)
-        if (i % 30 == 0):
-            wait_for_user()
-    wait_for_user()
-    world.destroy()
+#             if conf is None:
+#                 print('Failure!')
+#                 wait_for_user()
+#                 break
+#             set_joint_positions(world.robot, ik_joints, conf)
+#     print("Going to operate the base without collision checking")
+#     for i in range(100):
+#         goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
+#         #print(get_collision_data(world.robot))
+#         set_joint_positions(world.robot, world.base_joints, goal_pos)
+#         if (i % 30 == 0):
+#             wait_for_user()
+#     wait_for_user()
+#     world.destroy()
 
 def rrt(start_pose, sample_fn, goal_pose=Pose(point=(1.5,0,0))):
     print('RRT Goal',goal_pose)
@@ -336,21 +336,59 @@ def is_close(pose, goal, tol=0.1):
     else:
         return False
 
-
+def get_goal_pose(activity, world):
+    if activity == 'open-drawer':   # goal destination -- drawer
+        surface_name = 'indigo_drawer_top'
+        surface_aabb = compute_surface_aabb(world, surface_name)   
+    
+    elif activity == 'pickup-spam': # goal destination -- spam
+        entity_name = 'potted_meat_can1'
+        body = world.get_body(entity_name)
+        aabb = get_aabb(body)
+        pos = get_aabb_center(aabb)
+        rot = get_euler(body)
+        pose = Pose(pos, rot)
+    
+    elif activity == 'place-spam':  # goal destination -- drawer
+        entity_name = 'potted_meat_can1'
+        surface_name = 'indigo_drawer_top'
+        pose = pose2d_on_surface(world, entity_name, surface_name)
+   
+    elif activity == 'pickup-sugar':    # goal destination -- stovetop
+        entity_name = 'sugar_box0'
+        body = world.get_body(entity_name)
+        aabb = get_aabb(body)
+        pos = get_aabb_center(aabb)
+        rot = get_euler(body)
+        pose = Pose(pos, rot)
+    
+    elif activity == 'place-sugar': # goal destination -- counter
+        entity_name = 'sugar_box0'
+        surface_name = 'indigo_tmp'
+        pose = pose2d_on_surface(world, entity_name, surface_name)
+    
+    elif activity == 'close-drawer':    # goal destination -- drawer
+        surface_name = 'indigo_drawer_top'
+        surface_aabb = compute_surface_aabb(world, surface_name)
+    
+    else: 
+        print('Failure! No activity found.')
+        world.destroy()
+    
+    return pose
 
 
 def test_motion_planner():
-    #print('Random seed:', get_random_seed())
-    #print('Numpy seed:', get_numpy_seed())
+    print('Random seed:', get_random_seed())
+    print('Numpy seed:', get_numpy_seed())
     #print('pose', random_pose())
 
     np.set_printoptions(precision=3, suppress=True)
     world = World(use_gui=True)
     sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
     spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
-    #print('SUGAR', sugar_box)
-    #print('Kitchen Joints:', world.kitchen_joints)
-    #print('Sugar Box Info:', get_joint(world.robot, sugar_box))
+
+
     print('Beginning RRT')
     wait_for_user()
     world._update_initial()
@@ -372,8 +410,11 @@ def test_motion_planner():
         set_joint_positions(world.robot, world.base_joints, goal_pos)
     wait_for_user()
 
+    activity = 'pickup-spam'
+    goal_pose = get_goal_pose(activity, world)
+    print('goal_pose:', goal_pose)
 
-    path = rrt(start_pose, random_pose)
+    path = rrt(start_pose, random_pose, goal_pose)
     current_pose = start_pose
     for p in path:
         ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
