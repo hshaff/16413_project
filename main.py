@@ -301,11 +301,11 @@ def steer(x_nearest, x_rand):
 
 def random_pose():
     minx = 0
-    maxx = 2
-    miny = -1
-    maxy = 1
+    maxx = 1
+    miny = 1
+    maxy = 2
     minz = -1
-    maxz = 1
+    maxz = 0
     mintheta = -np.pi 
     maxtheta = np.pi 
 
@@ -409,6 +409,8 @@ def test_motion_planner():
         goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
         set_joint_positions(world.robot, world.base_joints, goal_pos)
     wait_for_user()
+    start_pose = get_link_pose(world.robot, tool_link)
+
 
     activity = 'pickup-spam'
     goal_pose = get_goal_pose(activity, world)
