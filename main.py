@@ -349,7 +349,9 @@ def is_close(pose, goal, tol=0.1):
 def get_goal_pose(activity, world):
     if activity == 'open-drawer':   # goal destination -- drawer
         surface_name = 'indigo_drawer_top'
-        surface_aabb = compute_surface_aabb(world, surface_name)   
+        surface_link = link_from_name(world.kitchen, surface_name)
+        pose = get_link_pose(world.kitchen, surface_link)
+
     
     elif activity == 'pickup-spam': # goal destination -- spam
         entity_name = 'potted_meat_can1'
@@ -360,10 +362,10 @@ def get_goal_pose(activity, world):
         pose = Pose(pos, rot)
     
     elif activity == 'place-spam':  # goal destination -- drawer
-        entity_name = 'potted_meat_can1'
         surface_name = 'indigo_drawer_top'
-        pose = pose2d_on_surface(world, entity_name, surface_name)
-   
+        surface_link = link_from_name(world.kitchen, surface_name)
+        pose = get_link_pose(world.kitchen, surface_link) 
+
     elif activity == 'pickup-sugar':    # goal destination -- stovetop
         entity_name = 'sugar_box0'
         body = world.get_body(entity_name)
@@ -373,13 +375,14 @@ def get_goal_pose(activity, world):
         pose = Pose(pos, rot)
     
     elif activity == 'place-sugar': # goal destination -- counter
-        entity_name = 'sugar_box0'
         surface_name = 'indigo_tmp'
-        pose = pose2d_on_surface(world, entity_name, surface_name)
+        surface_link = link_from_name(world.kitchen, surface_name)
+        pose = get_link_pose(world.kitchen, surface_link) 
     
     elif activity == 'close-drawer':    # goal destination -- drawer
         surface_name = 'indigo_drawer_top'
-        surface_aabb = compute_surface_aabb(world, surface_name)
+        surface_link = link_from_name(world.kitchen, surface_name)
+        pose = get_link_pose(world.kitchen, surface_link) 
     
     else: 
         print('Failure! No activity found.')
@@ -439,7 +442,6 @@ def test_motion_planner():
 
     activity = 'place-spam'
     start_pose = get_link_pose(world.robot, tool_link)
-
     goal_pose = get_goal_pose(activity, world)
     print('goal_pose:', goal_pose)
 
