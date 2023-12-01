@@ -11,7 +11,7 @@ import argparse
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
 from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, unit_from_theta, get_joint_positions, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -20,7 +20,7 @@ from padm_project.src.world import World
 from padm_project.src.utils import JOINT_TEMPLATE, BLOCK_SIZES, BLOCK_COLORS, COUNTERS, \
     ALL_JOINTS, LEFT_CAMERA, CAMERA_MATRIX, CAMERA_POSES, CAMERAS, compute_surface_aabb, \
     BLOCK_TEMPLATE, name_from_type, GRASP_TYPES, SIDE_GRASP, joint_from_name, \
-    STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose, translate_linearly
+    STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose#, translate_linearly
 
 
 def find_ff_heuristic(states, predicates, actions, pos_goal,  neg_goal):
@@ -148,6 +148,16 @@ def solve():
     return 
 
 UNIT_POSE2D = (0., 0., 0.)
+
+def translate_linearly(world, distance, rot=0):
+    # TODO: could just apply in the base frame
+    x, y, theta = get_joint_positions(world.robot, world.base_joints)
+    theta = theta + rot
+    pos = np.array([x, y])
+    goal_pos = pos + distance * unit_from_theta(theta)
+    goal_pose = np.append(goal_pos, [theta])
+    return goal_pose
+
 
 def add_ycb(world, ycb_type, idx=0, counter=0, **kwargs):
     name = name_from_type(ycb_type, idx)
@@ -400,8 +410,6 @@ def test_motion_planner():
     ##print('IK Joints', get_ik_joints(world.robot, PANDA_INFO, tool_link))
     #print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
     sample_fn = get_sample_fn(world.robot, world.arm_joints)
-
-    start_pose = get_link_pose(world.robot, tool_link)
     #print('Start pose', type(start_pose))
     #print('gripper Joints', [get_joint_name(world.robot, joint) for joint in world.gripper_joints])
     
@@ -410,9 +418,28 @@ def test_motion_planner():
         set_joint_positions(world.robot, world.base_joints, goal_pos)
     wait_for_user()
     start_pose = get_link_pose(world.robot, tool_link)
+    goal_pos = translate_linearly(world, 0.01, rot=-np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+    for i in range(100):
+        goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
+        set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+
+    goal_pos = translate_linearly(world, 0.01, rot=np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
 
 
-    activity = 'pickup-spam'
+
+
+
+
+
+
+    activity = 'place-spam'
+    start_pose = get_link_pose(world.robot, tool_link)
+
     goal_pose = get_goal_pose(activity, world)
     print('goal_pose:', goal_pose)
 
