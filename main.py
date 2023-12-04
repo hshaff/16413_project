@@ -310,9 +310,9 @@ def steer(x_nearest, x_rand):
     return ((x,y,z), orientation)
 
 def random_pose():
-    minx = 0
+    minx = -1
     maxx = 1
-    miny = 1
+    miny = 0
     maxy = 2
     minz = -1
     maxz = 0
@@ -450,10 +450,6 @@ def test_motion_planner():
     for p in path:
         ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
         end_pose = p
-        #conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
-        #wait_for_user()
-        #print('current_pose', current_pose[0])
-        #print('end_pose', end_pose[0])
         for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
             conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
             if conf is None:
@@ -479,29 +475,90 @@ def test_motion_planner():
             #    break
            # set_joint_positions(world.robot, ik_joints, conf)
         #current_pose = end_pose
+def create_world():
+    print('Random seed:', get_random_seed())
+    print('Numpy seed:', get_numpy_seed())
+
+    np.set_printoptions(precision=3, suppress=True)
+    world = World(use_gui=True)
+    sugar_box = add_sugar_box(world, idx=0, counter=1, pose2d=(-0.2, 0.65, np.pi / 4))
+    spam_box = add_spam_box(world, idx=1, counter=0, pose2d=(0.2, 1.1, np.pi / 4))
+    world._update_initial()
+
+    return world
 
 
+def move_into_position(world):
+    for i in range(120):
+        goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
+        set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+    goal_pos = translate_linearly(world, 0.01, rot=-np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+    for i in range(100):
+        goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
+        set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
+    goal_pos = translate_linearly(world, 0.01, rot=np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, goal_pos)
+    wait_for_user()
 
-def main():
+def main_plan():
     plan = ''
     parser = PDDL_Parser()
     domain_filename = 'kitchenDomain.pddl'
     problem_filename = 'pb1.pddl'
     parser.parse_domain(domain_filename)
     parser.parse_problem(problem_filename)
+    B = BFS(parser.state, parser.actions, parser.positive_goals, parser.negative_goals)
+    print(B.path)
+    world = create_world()
+    tool_link = link_from_name(world.robot, 'panda_hand')
+
+    move_into_position(world)
+    start_pose = get_link_pose(world.robot, tool_link)
+    for activity in B.path:
+        goal_pose = get_goal_pose(activity, world)
+        print('activity:', activity)
+        path = rrt(start_pose, random_pose, goal_pose) #add custom bounds to rrt sampling
+        current_pose = start_pose
+        for p in path:
+            ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+            end_pose = p
+            for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
+                conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
+                if conf is None:
+                    print('Failure!')
+                    #wait_for_user()
+                    break
+                set_joint_positions(world.robot, ik_joints, conf)
+            current_pose = end_pose
+        print(activity,' complete')
+        wait_for_user()
+
+
+def main():
+    #plan = ''
+    #parser = PDDL_Parser()
+    #domain_filename = 'kitchenDomain.pddl'
+    #problem_filename = 'pb1.pddl'
+    ##parser.parse_domain(domain_filename)
+    #parser.parse_problem(problem_filename)
 
    # G = generate_graph(parser.state, parser.actions, parser.predicates)
     # plan = solve()
     # print(plan)
-    B = BFS(parser.state, parser.actions, parser.positive_goals, parser.negative_goals)
-    print(B.path)
+#    B = BFS(parser.state, parser.actions, parser.positive_goals, parser.negative_goals)
+ #   print(B.path)
     # Call motion planner
     #motion_planner_main()
-    test_motion_planner()
+  #  test_motion_planner()
     # ff = find_ff_heuristic(parser.state, parser.predicates, parser.actions, parser.positive_goals, parser.negative_goals)
     # print(ff)
     # HC =  EFHC(parser.state, parser.predicates, parser.actions, parser.positive_goals, parser.negative_goals)
     # print(HC)
+    main_plan()
     return 
 
 if __name__ == "__main__":
