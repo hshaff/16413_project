@@ -11,7 +11,7 @@ import argparse
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
 from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, unit_from_theta, get_joint_positions, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, unit_from_theta, get_joint_positions, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler, get_all_links, get_link_names, get_link_parent, create_attachment, get_joint_names
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -20,7 +20,7 @@ from padm_project.src.world import World
 from padm_project.src.utils import JOINT_TEMPLATE, BLOCK_SIZES, BLOCK_COLORS, COUNTERS, \
     ALL_JOINTS, LEFT_CAMERA, CAMERA_MATRIX, CAMERA_POSES, CAMERAS, compute_surface_aabb, \
     BLOCK_TEMPLATE, name_from_type, GRASP_TYPES, SIDE_GRASP, joint_from_name, \
-    STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose#, translate_linearly
+    STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose, open_surface_joints, get_surface_obstacles #, translate_linearly
 
 
 def find_ff_heuristic(states, predicates, actions, pos_goal,  neg_goal):
@@ -390,6 +390,35 @@ def get_goal_pose(activity, world):
     
     return pose
 
+def perform_actions(activity, world, current_pose):
+    if activity == 'open-drawer':   # goal destination -- drawer]
+        open_surface_joints(world, 'indigo_drawer_top')
+    elif activity == 'pickup-spam': # goal destination -- spam
+        entity_name = 'potted_meat_can1'
+        body = world.get_body(entity_name)
+        set_pose(body, current_pose)
+    elif activity == 'place-spam':  # goal destination -- drawer
+        # Spam body
+        entity_name = 'potted_meat_can1'
+        surface_name = 'indigo_drawer_top'
+        pose2d_on_surface(world, entity_name, surface_name)
+    elif activity == 'pickup-sugar':    # goal destination -- stovetop
+        entity_name = 'sugar_box0'
+        body = world.get_body(entity_name)
+        set_pose(body, current_pose)
+    elif activity == 'place-sugar': # goal destination -- counter
+        entity_name = 'sugar_box0'
+        surface_name = 'indigo_tmp'
+        pose2d_on_surface(world, entity_name, surface_name)
+    elif activity == 'close-drawer':    # goal destination -- drawer
+        joint = joint_from_name(world.kitchen, 'indigo_drawer_top_joint')
+        world.close_door(joint)   
+    else: 
+        print('Failure! No actions found.')
+        world.destroy()
+    
+    return
+
 
 def test_motion_planner():
     print('Random seed:', get_random_seed())
@@ -534,6 +563,7 @@ def main_plan():
                     break
                 set_joint_positions(world.robot, ik_joints, conf)
             current_pose = end_pose
+        perform_actions(activity, world, current_pose)
         print(activity,' complete')
         wait_for_user()
 
