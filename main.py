@@ -40,10 +40,7 @@ def main_plan():
     move_into_position(world)
     start_pose = get_link_pose(world.robot, tool_link)
 
-    print(COUNTERS)
-    print(ALL_JOINTS)
-    wait_for_user()
-    for activity in B.path:
+    for i, activity in enumerate(B.path):
         goal_pose = get_goal_pose(activity, world)
         print('activity:', activity)
         path = rrt(start_pose, random_pose, goal_pose) #add custom bounds to rrt sampling
@@ -58,6 +55,14 @@ def main_plan():
                     #wait_for_user()
                     break
                 set_joint_positions(world.robot, ik_joints, conf)
+                if B.path[i-1] == 'pickup-spam':
+                    entity_name = 'potted_meat_can1'
+                    body = world.get_body(entity_name)
+                    set_pose(body, pose)
+                elif B.path[i-1] == 'pickup-sugar':
+                    entity_name = 'sugar_box0'
+                    body = world.get_body(entity_name)
+                    set_pose(body, pose)
             current_pose = end_pose
         perform_actions(activity, world, current_pose)
         print(activity,' complete')
