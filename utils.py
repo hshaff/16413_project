@@ -10,8 +10,17 @@ import argparse
 
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
-from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
-from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, unit_from_theta, get_joint_positions, set_joint_positions, interval_generator, get_link_pose, interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, get_aabb_center, get_aabb, get_euler, get_all_links, get_link_names, get_link_parent, create_attachment, get_joint_names
+from pybullet_tools.utils import set_pose, Pose, Point, Euler, multiply, get_pose, get_point, \
+    create_box, set_all_static, WorldSaver, create_plane, COLOR_FROM_NAME, stable_z_on_aabb, \
+    pairwise_collision, elapsed_time, get_aabb_extent, get_aabb, create_cylinder, set_point, \
+    get_function_name, wait_for_user, dump_world, set_random_seed, set_numpy_seed, get_random_seed, \
+    get_numpy_seed, set_camera, set_camera_pose, link_from_name, get_movable_joints, get_joint_name
+from pybullet_tools.utils import CIRCULAR_LIMITS, get_custom_limits, unit_from_theta, \
+    get_joint_positions, set_joint_positions, interval_generator, get_link_pose, \
+    interpolate_poses, get_collision_data, get_configuration, quat_from_euler, euler_from_quat, \
+    is_pose_close, get_joint, get_joint_position, joint_from_name, get_joints, get_joint_name, \
+    get_aabb_center, get_aabb, get_euler, get_all_links, get_link_names, get_link_parent, \
+    create_attachment, get_joint_names, get_length, violates_limits, get_difference_fn
 
 from pybullet_tools.ikfast.franka_panda.ik import PANDA_INFO, FRANKA_URDF
 from pybullet_tools.ikfast.ikfast import get_ik_joints, closest_inverse_kinematics
@@ -21,7 +30,7 @@ from padm_project.src.utils import JOINT_TEMPLATE, BLOCK_SIZES, BLOCK_COLORS, CO
     ALL_JOINTS, LEFT_CAMERA, CAMERA_MATRIX, CAMERA_POSES, CAMERAS, compute_surface_aabb, \
     BLOCK_TEMPLATE, name_from_type, GRASP_TYPES, SIDE_GRASP, joint_from_name, \
     STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose, open_surface_joints, get_surface_obstacles, \
-    surface_from_name #, translate_linearly
+    surface_from_name 
 
 UNIT_POSE2D = (0., 0., 0.)
 
@@ -179,7 +188,8 @@ def get_sample_fn(body, joints, custom_limits={}, **kwargs):
         return tuple(next(generator))
     return fn
 
-def rrt(start_pose, sample_fn, goal_pose=Pose(point=(1.5,0,0))):
+def rrt(start_pose, sample_fn, robot, ik_joints, tool_link, goal_pose=Pose(point=(1.5,0,0))):
+    max_iters = 1000
     print('RRT Goal',goal_pose)
     print('RRT start',start_pose)
     V = set([start_pose])
@@ -187,24 +197,26 @@ def rrt(start_pose, sample_fn, goal_pose=Pose(point=(1.5,0,0))):
     G = (V,E)
     path = 0
     temp_path = []
-    while True:
-        x_rand = sample_fn()  #
-        #print("x_rand", x_rand)
+    difference_fn = get_difference_fn(robot, ik_joints)
+    cnt = 0
+    while (cnt <= max_iters):
+        cnt += 1
+        if not (cnt % 10):  # add some goal biasing to speed up RRT
+            x_rand = goal_pose
+        else: 
+            x_rand = sample_fn() 
         x_nearest = nearest(G, x_rand)
-        #print('x_nearest', x_nearest)
         x_new = steer(x_nearest, x_rand)
-        #print('x_new', x_new)
-        if True: #obstacle avoidance goes here
+        conf = next(closest_inverse_kinematics(robot, PANDA_INFO, tool_link, x_new, max_time=0.05), None)
+        if conf: #obstacle avoidance goes here
             V.add(x_new)
             E.add((x_nearest, x_new))
-            #print(x_new)
-        #temp_path.append(x_new)
             #if is_pose_close(x_new, goal_pose, pos_tolerance=1e-1, ori_tolerance=1*np.pi):  # goal detection
             if is_close(x_new, goal_pose):
                 path, num_nodes, G = extract_path(G, x_new, start_pose)
                 print(num_nodes, len(path))
                 return path
-    #return temp_path
+    return path
 
 def extract_path(G, x_end, start_pose):
     V = G[0]
@@ -416,12 +428,6 @@ def test_motion_planner():
     wait_for_user()
 
 
-
-
-
-
-
-
     activity = 'place-spam'
     start_pose = get_link_pose(world.robot, tool_link)
     goal_pose = get_goal_pose(activity, world)
@@ -444,20 +450,6 @@ def test_motion_planner():
     print('FINAL POSE', get_link_pose(world.robot, tool_link))
 
 
-        
-
-
-
-
-        #for pose in interpolate_poses(current_pose, end_pose, pos_step_size=0.01):
-        #    conf = next(closest_inverse_kinematics(world.robot, PANDA_INFO, tool_link, pose, max_time=0.05), None)
-         #   if conf is None:
-          #      print('Failure!')
-           #     wait_for_user()
-            #    break
-           # set_joint_positions(world.robot, ik_joints, conf)
-        #current_pose = end_pose
-
 def create_world():
     print('Random seed:', get_random_seed())
     print('Numpy seed:', get_numpy_seed())
@@ -474,14 +466,14 @@ def move_into_position(world):
     for i in range(120):
         goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
         set_joint_positions(world.robot, world.base_joints, goal_pos)
-    wait_for_user()
+    #wait_for_user()
     goal_pos = translate_linearly(world, 0.01, rot=-np.pi/2)
     set_joint_positions(world.robot, world.base_joints, goal_pos)
-    wait_for_user()
+    #wait_for_user()
     for i in range(100):
         goal_pos = translate_linearly(world, 0.01) # does not do any collision checking!!
         set_joint_positions(world.robot, world.base_joints, goal_pos)
-    wait_for_user()
+    #wait_for_user()
     goal_pos = translate_linearly(world, 0.01, rot=np.pi/2)
     set_joint_positions(world.robot, world.base_joints, goal_pos)
-    wait_for_user()
+    #wait_for_user()
