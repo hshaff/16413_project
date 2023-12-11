@@ -3,6 +3,7 @@ from pddl_parser_root.pddl_parser.planner import Planner
 from pddl_parser_root.pddl_parser.PDDL import PDDL_Parser
 from Graph import SearchNode, Path
 from utils import *
+from traj import get_opt_traj
 import math
 import numpy as np 
 import os
@@ -24,7 +25,6 @@ from padm_project.src.utils import JOINT_TEMPLATE, BLOCK_SIZES, BLOCK_COLORS, CO
     STOVES, TOP_GRASP, randomize, LEFT_DOOR, point_from_pose, open_surface_joints, get_surface_obstacles, \
     surface_from_name #, translate_linearly
 
-
 def main_plan():
     plan = ''
     parser = PDDL_Parser()
@@ -42,6 +42,7 @@ def main_plan():
 
     for i, activity in enumerate(B.path):
         print('activity:', activity)
+        print('Start joint pos', get_joint_positions(world.robot, ik_joints))
         goal_pose = get_goal_pose(activity, world)
         path = rrt(start_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
         current_pose = start_pose
@@ -81,10 +82,30 @@ def main_plan():
         perform_actions(activity, world, current_pose)
         print(activity,' complete')
         #wait_for_user()
+def test_optimal_traj():
+    plan = ''
+    parser = PDDL_Parser()
+    domain_filename = 'kitchenDomain.pddl'
+    problem_filename = 'pb1.pddl'
+    parser.parse_domain(domain_filename)
+    parser.parse_problem(problem_filename)
+    B = BFS(parser.state, parser.actions, parser.positive_goals, parser.negative_goals)
+    print(B.path)
+    world = create_world()
+    tool_link = link_from_name(world.robot, 'panda_hand')
+    ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
+    move_into_position(world)
+    start_pose = get_link_pose(world.robot, tool_link)
 
+    traj = get_opt_traj()
+
+    for conf in traj:
+        set_joint_positions(world.robot, ik_joints, conf)
+        wait_for_user()
 
 def main():
-    main_plan()
+    #main_plan()
+    test_optimal_traj()
     return 
 
 if __name__ == "__main__":
