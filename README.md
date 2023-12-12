@@ -110,14 +110,15 @@ This optimization problem is subject to two constraints. The first constraint is
 If we were to add in the collision avoidance, the third set of constraints would constrain the norm of each of the decision variables such that the obstacle is avoided. However, we have not implemented that constraint.
 
 c. Mathematical Constraint Problem
-$$min \sum_{n=0}^N-1 \| x_{n+1} - x_{n} \|^2$$
+Objective: $$min \sum_{n=0}^{N-1} \| x_{n+1} - x_{n} \|^2$$
+Subject to: $$x_0$$ = initial_configuration 
+            $$x_N$$ = final_configuration
 
 d. Challenges
-Mention any challenges you faced and things that you tried irrespective of whether that worked or not. This will be very important if the problem you defined doesn’t end up working. 
+By far, the largest challenge we faced with this section of the project was getting drake and pydrake set up. After attempting all suggested methods of installation, we were unable to get pydrake properly installed on either of our Ubuntu VMs. However, we were able to successfully pip install drake and import pydrake without issues on our MacOS computers. In order to implement and test this section of the project we had to get a bit creative. We selected a motion whose trajectory we wanted to optimize. We took the starting pose and the goal pose for that trajectory and set those as the initial configuration and final configuration in the traj_opt.py script. Then we performed the trajectory optimization as explained in sections b-c above. In order to test that our optimization was performing as expected, we copied the optimal trajectory output poses from the bezier_path() function to a script called traj.py, which has a function called get_opt_traj(). We committed this to our repository and were able to pull it to our Ubuntu VMs to test that the trajectory optimization was working as expected. We executed the consecutive joint angles with the robot arm in the simulation environment and saw that the arm executes what appears to be the optimal trajectory for the motion that we chose to optimize.
 
 e. GIF/Vido 
 GIF/video of the robot executing the plan and embedded in the README
 
 f. Comparison to Motion Planner
-Compare the resulting optimized trajectory to the initial sample-based motion plan
-
+The largest difference between the sample based motion planner and the trajectory optimization is that there is no longer randomized motion. Every call to the trajectory optimization will produce the same optimal path from the starting pose to the goal pose. In the sample based motion planner, the points in space were randomly sampled and the motions from the starting pose to the goal pose for each activity varied quite a bit. Also, the runtime for the sample based motion planner varied much more than for the trajectory optimization. The sample based motion planner would find a path to the goal but would sometime get lucky with its choice of randomly sampled points and get there quickly, or it could take much longer with poorly sampled points. Adding the goal biasing significantly decreased the runtime, but it still varied a good amount from run to run. The trajectory optimization took the same amount of time to run each time.
