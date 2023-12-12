@@ -39,16 +39,18 @@ def main_plan():
     ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
     move_into_position(world)
     start_pose = get_link_pose(world.robot, tool_link)
-
+    current_pose = start_pose
+    
     for i, activity in enumerate(B.path):
         print('activity:', activity)
         goal_pose = get_goal_pose(activity, world)
-        path = rrt(start_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
-        current_pose = start_pose
+        path = rrt(current_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
+        # move_toward_goal(goal_pose, world)
+        # wait_for_user()
         if not path:
             # RRT did not find a path, move closer to the activity goal
-            print('Current Pose:', current_pose)
-            print('Goal Pose:', goal_pose)
+            # move_toward_goal(goal_pose, world)
+            # wait_for_user()
             pos_update = translate_linearly(world, 0.01, rot=np.pi/2)
             set_joint_positions(world.robot, world.base_joints, pos_update)
             for j in range(60):

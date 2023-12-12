@@ -270,7 +270,7 @@ def random_pose():
     maxx = 1
     miny = 0
     maxy = 2
-    minz = -1
+    minz = -0.3
     maxz = 0
     mintheta = -np.pi 
     maxtheta = np.pi 
@@ -477,3 +477,34 @@ def move_into_position(world):
     goal_pos = translate_linearly(world, 0.01, rot=np.pi/2)
     set_joint_positions(world.robot, world.base_joints, goal_pos)
     #wait_for_user()
+
+def move_toward_goal(goal_pose, world):
+    x, y, theta = get_joint_positions(world.robot, world.base_joints)
+    print('x:', x)
+    print('y:', y)
+    pos, rot = goal_pose
+    dist_x = x - pos[0]
+    dist_y = y - pos[1]
+    print('dist_x:', dist_x)
+    print('dist_y:', dist_y)
+
+    # if x_dist >= 0.5:
+    #     for i in range(20):
+    #     goal_pos = translate_linearly(world, 0.01)
+    #     set_joint_positions(world.robot, world.base_joints, goal_pos)
+    # if y_dist >= 0.5:
+    #     for i in range(20):
+    #     goal_pos = translate_linearly(world, 0.01)
+    #     set_joint_positions(world.robot, world.base_joints, goal_pos)
+
+        # pos_update = translate_linearly(world, 0.01, rot=np.pi/2)
+            # set_joint_positions(world.robot, world.base_joints, pos_update)
+            # for j in range(60):
+            #     pos_update = translate_linearly(world, 0.01)
+            #     set_joint_positions(world.robot, world.base_joints, pos_update)
+            # pos_update = translate_linearly(world, 0.01, rot=-np.pi/2)
+            # set_joint_positions(world.robot, world.base_joints, pos_update)
+            # for j in range(20):
+            #     pos_update = translate_linearly(world, 0.01)
+            #     set_joint_positions(world.robot, world.base_joints, pos_update)
+            # wait_for_user()
