@@ -40,21 +40,31 @@ def main_plan():
     move_into_position(world)
     start_pose = get_link_pose(world.robot, tool_link)
     current_pose = start_pose
-    
+    start_conf = get_joint_positions(world.robot, ik_joints)
+
+    # for activity in B.path:
+    #     goal_pose = get_goal_pose(activity, world)      
+    #     move_toward_goal(goal_pose, world)
+    #     wait_for_user()
+
     for i, activity in enumerate(B.path):
         print('activity:', activity)
+        # if activity == 'close-drawer':
+        #     for j in range(30):
+        #         pos_update = translate_linearly(world, -0.01)
+        #         set_joint_positions(world.robot, world.base_joints, pos_update)
+        #     set_joint_positions(world.robot, ik_joints, start_conf)
         print('Start joint pos', get_joint_positions(world.robot, ik_joints))
         goal_pose = get_goal_pose(activity, world)
         path = rrt(current_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
-        # move_toward_goal(goal_pose, world)
-        # wait_for_user()
+        
         if not path:
             # RRT did not find a path, move closer to the activity goal
             # move_toward_goal(goal_pose, world)
             # wait_for_user()
             pos_update = translate_linearly(world, 0.01, rot=np.pi/2)
             set_joint_positions(world.robot, world.base_joints, pos_update)
-            for j in range(60):
+            for j in range(50):
                 pos_update = translate_linearly(world, 0.01)
                 set_joint_positions(world.robot, world.base_joints, pos_update)
             pos_update = translate_linearly(world, 0.01, rot=-np.pi/2)
@@ -65,6 +75,7 @@ def main_plan():
             wait_for_user()
             start_pose = get_link_pose(world.robot, tool_link)
             current_pose = start_pose
+            set_joint_positions(world.robot, ik_joints, start_conf)
             path = rrt(start_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
 
         for p in path:
@@ -84,6 +95,7 @@ def main_plan():
         perform_actions(activity, world, current_pose)
         print(activity,' complete')
         #wait_for_user()
+
 def test_optimal_traj():
     plan = ''
     parser = PDDL_Parser()
@@ -106,8 +118,8 @@ def test_optimal_traj():
         wait_for_user()
 
 def main():
-    #main_plan()
-    test_optimal_traj()
+    main_plan()
+    #test_optimal_traj()
     return 
 
 if __name__ == "__main__":

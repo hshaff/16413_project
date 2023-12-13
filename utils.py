@@ -306,7 +306,9 @@ def get_goal_pose(activity, world):
     if activity == 'open-drawer':   # goal destination -- drawer
         surface_name = 'indigo_drawer_top'
         surface_link = link_from_name(world.kitchen, surface_name)
-        pose = get_link_pose(world.kitchen, surface_link)
+        pos, rot = get_link_pose(world.kitchen, surface_link)
+        pos += np.array([0.2, 0.0, -0.1])
+        pose = (pos, rot)
     elif activity == 'pickup-spam': # goal destination -- spam
         entity_name = 'potted_meat_can1'
         body = world.get_body(entity_name)
@@ -332,7 +334,9 @@ def get_goal_pose(activity, world):
     elif activity == 'close-drawer':    # goal destination -- drawer
         surface_name = 'indigo_drawer_top'
         surface_link = link_from_name(world.kitchen, surface_name)
-        pose = get_link_pose(world.kitchen, surface_link) 
+        pos, rot = get_link_pose(world.kitchen, surface_link) 
+        #pos += np.array([0.2, 0.0, -0.1])
+        pose = (pos, rot)
     else: 
         print('Failure! No activity found.')
         world.destroy()
