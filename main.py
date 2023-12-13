@@ -49,11 +49,6 @@ def main_plan():
 
     for i, activity in enumerate(B.path):
         print('activity:', activity)
-        # if activity == 'close-drawer':
-        #     for j in range(30):
-        #         pos_update = translate_linearly(world, -0.01)
-        #         set_joint_positions(world.robot, world.base_joints, pos_update)
-        #     set_joint_positions(world.robot, ik_joints, start_conf)
         print('Start joint pos', get_joint_positions(world.robot, ik_joints))
         goal_pose = get_goal_pose(activity, world)
         path = rrt(current_pose, random_pose, world.robot, ik_joints, tool_link, goal_pose) #add custom bounds to rrt sampling
@@ -72,7 +67,7 @@ def main_plan():
             for j in range(20):
                 pos_update = translate_linearly(world, 0.01)
                 set_joint_positions(world.robot, world.base_joints, pos_update)
-            wait_for_user()
+            #wait_for_user()
             start_pose = get_link_pose(world.robot, tool_link)
             current_pose = start_pose
             set_joint_positions(world.robot, ik_joints, start_conf)
@@ -94,7 +89,8 @@ def main_plan():
             current_pose = end_pose
         perform_actions(activity, world, current_pose)
         print(activity,' complete')
-        #wait_for_user()
+        print("end joint conf:", get_joint_positions(world.robot, ik_joints))
+    wait_for_user()
 
 def test_optimal_traj():
     plan = ''
