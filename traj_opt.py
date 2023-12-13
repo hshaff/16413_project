@@ -46,5 +46,5 @@ def bezier_path(T=100):
         traj.append(bezier(t, p0, p1,p2))
     return traj
     
-
+print(bezier_path(T=500))
 
