@@ -111,8 +111,8 @@ If we were to add in the collision avoidance, the third set of constraints would
 
 c. Mathematical Constraint Problem  
 Objective: $$min \sum_{n=0}^{N-1} \| x_{n+1} - x_{n} \|^2$$
-Subject to: $$x_0$$ = initial_configuration 
-            $$x_N$$ = final_configuration
+Subject to: $$x_0 = initial configuration $$
+            $$x_N = final configuration$$
 
 d. Challenges  
 By far, the largest challenge we faced with this section of the project was getting drake and pydrake set up. After attempting all suggested methods of installation, we were unable to get pydrake properly installed on either of our Ubuntu VMs. However, we were able to successfully pip install drake and import pydrake without issues on our MacOS computers. In order to implement and test this section of the project we had to get a bit creative. We selected a motion whose trajectory we wanted to optimize. We took the starting pose and the goal pose for that trajectory and set those as the initial configuration and final configuration in the traj_opt.py script. Then we performed the trajectory optimization as explained in sections b-c above. In order to test that our optimization was performing as expected, we copied the optimal trajectory output poses from the bezier_path() function to a script called traj.py, which has a function called get_opt_traj(). We committed this to our repository and were able to pull it to our Ubuntu VMs to test that the trajectory optimization was working as expected. We executed the consecutive joint angles with the robot arm in the simulation environment and saw that the arm executes what appears to be the optimal trajectory for the motion that we chose to optimize.
