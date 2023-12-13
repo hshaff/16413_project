@@ -9,6 +9,7 @@ import numpy as np
 import os
 import sys
 import argparse
+import time
 
 sys.path.extend(os.path.abspath(os.path.join(os.getcwd(), d)) for d in ['padm_project', 'padm_project/ss-pybullet'])
 
@@ -106,16 +107,26 @@ def test_optimal_traj():
     ik_joints = get_ik_joints(world.robot, PANDA_INFO, tool_link)
     move_into_position(world)
     start_pose = get_link_pose(world.robot, tool_link)
-
+    pos_update = translate_linearly(world, 0.01, rot=np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, pos_update)
+    for j in range(50):
+        pos_update = translate_linearly(world, 0.01)
+        set_joint_positions(world.robot, world.base_joints, pos_update)
+    pos_update = translate_linearly(world, 0.01, rot=-np.pi/2)
+    set_joint_positions(world.robot, world.base_joints, pos_update)
+    for j in range(20):
+        pos_update = translate_linearly(world, 0.01)
+        set_joint_positions(world.robot, world.base_joints, pos_update)
     traj = get_opt_traj()
 
     for conf in traj:
         set_joint_positions(world.robot, ik_joints, conf)
-        wait_for_user()
+        time.sleep(0.08)
+    wait_for_user()
 
 def main():
-    main_plan()
-    #test_optimal_traj()
+    #main_plan()
+    test_optimal_traj()
     return 
 
 if __name__ == "__main__":
