@@ -82,7 +82,7 @@ We chose to implement RRT for our motion planner. Based on the action to complet
 In order to use the motion planner to complete the assigned tasks, it is necessary to integrate with the activity planner implementation from the previous section of the project. Our approach first parses the PDDL scripts and calls the activity planner. Then, for each activity in the activity plan, there is a starting position/pose and a goal region. These are then used as the starting node and goal region for our RRT implementation. Once the goal region is reached, the activity is executed and the same process is repeated for every action in the activity plan.
 
 ### Video of Motion Plan Execution  
-TODO - when the implementation is complete, a GIF of the execution will be added here.
+The video of the robot arm executing the motion plan can be viewed here: https://youtu.be/8CDxfg7Tu9A.  
 
 ### Challenges  
 The first challenge we faced was figuring out how to work with the pybullet library. It took a good amount of time to get familiar with the provided functions and how to use them to control the motion of the robot and the objects in the environment. It was helpful to add print statements and change some code in the minimal_example.py script in the PADM Project repository to gain intuition about how the given environment works. 
