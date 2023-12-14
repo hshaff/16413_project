@@ -102,9 +102,8 @@ The problem is set up as a pydrake MathematicalProgram and the Solve function in
 ### Optimization Problem  
 The decision variables (x0, x1, x2) are each a vector of 7 elements with continuous domains, representing each of the 7 joint angles. Therefore, there are 7*3 = 21 output values from the trajectory optimization solution.
 
-Our objective function is minimizing the sum of the 2-norms of each adjacent set of sample points in the problem. For example, with three domain variables (x0, x1, x2), the objective functions are as follows: 
-- min(np.sqrt((x0-x1).dot(x0-x1)))  
-- min(np.sqrt((x2-x1).dot(x2-x1)))
+Our objective function is minimizing the sum of the 2-norms of each adjacent set of sample points in the problem. For example, with three domain variables (x0, x1, x2), the objective function is as follows: 
+- min(np.sqrt((x0-x1).dot(x0-x1))+ np.sqrt((x2-x1).dot(x2-x1)))
   
 This objective function optimizes the trajectory by minimizing the total change in the joint angles between subsequent joint configurations. This would eliminate any motion that is not in the shortest feasible path from the starting pose to the goal pose.  
 
