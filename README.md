@@ -55,6 +55,8 @@ A decision that had to be made while implementing the motion planner was the dis
 
 One simplification that we made when implementing the motion planner was moving the base such that the drawer and the spam are within reach of the robot arm. We set a maximum number of iterations in our RRT implementation to 1000. If the maximum number of iterations is exceeded and no path has been found to the goal, we assume that the goal region is out of reach of the robot arm and the base is moved toward the goal. RRT is then rerun to find a valid path to the goal.
 
+In order to perform the actions 'pickup-sugar' and 'pickup-spam' we found it was easiest to set the location of the object to the same location as the gripper of the robot arm for each iteration of the movement. Our code checks if the previous activity was either 'pickup-sugar' or 'pickup-spam' and if so, it updates the location of either the sugar box or the spam box as the robot arm moves toward the location where the box is being placed. 
+
 Originally our RRT implementation was taking quite a long time to run. We added goal biasing to the RRT implementation to bias the RRT solution toward the goal. This showed drastic improvement in RRT runtime.
 
 ### Key Files, Key Functions, Motion Planner  
